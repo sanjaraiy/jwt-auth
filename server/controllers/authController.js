@@ -53,16 +53,52 @@ const signupHandler = async (req, res, next) => {
             message: error.message
         })
     }
-
-
-    res.status(200).json({
-        success:true,
-        data: {}
-    })
-
 } 
+
+const signinHandler = async (req, res, next) => {
+     const {email, password} = req.body;
+
+     if(!email || !password){
+        return res.status(400).json({
+            success: false,
+            message: "Every field is required",
+        })
+     }
+     
+     try {
+        const isUser = await User.findOne({email}).select('+password');
+        
+        if(!isUser || isUser.password !== password){
+           return res.status(400).json({
+               success: false,
+               message: "Invalid credentials",
+           })
+        }
+        
+        const token = isUser.jwtToken();
+        isUser.password=undefined;
+   
+        const cookieOption = {
+            maxAge: 24 * 60 * 60 * 1000,
+            httpOnly: true,
+        }
+   
+        res.cookie("token", token, cookieOption);
+        res.status(200).json({
+           success: true,
+           data: isUser,
+        })
+     } catch (error) {
+         res.status(400).json({
+            success: false,
+            message: error.message
+         })
+     }
+
+}
 
 module.exports = {
     signupHandler,
+    signinHandler,
 }
 
