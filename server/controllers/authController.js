@@ -1,6 +1,6 @@
 const User = require("../models/userModel");
 const emailValidator = require('email-validator')
-
+const bcrypt = require('bcrypt');
 const signupHandler = async (req, res, next) => {
     const {username, email, password, confirmPassword} = req.body;
     console.log(username, email, password, confirmPassword);
@@ -67,8 +67,8 @@ const signinHandler = async (req, res, next) => {
      
      try {
         const isUser = await User.findOne({email}).select('+password');
-        
-        if(!isUser || isUser.password !== password){
+        const isValidPassword = await bcrypt.compare(password, isUser.password);
+        if(!isUser || !isValidPassword){
            return res.status(400).json({
                success: false,
                message: "Invalid credentials",
@@ -97,8 +97,47 @@ const signinHandler = async (req, res, next) => {
 
 }
 
+const getUserHandler = async (req, res, next) =>{
+  const userId = req.user.id;
+
+  try {
+      const user = await User.findById(userId);
+      return res.status(200).json({
+        success: true,
+        data: user
+      })
+  } catch (error) {
+     return res.status(400).json({
+        success: false,
+        message: error.message,
+     })
+  }
+}
+
+const logoutHandler = async(req, res, next) => {
+       try {
+          const cookieOption = {
+              expires: new Date(),
+              httpOnly: true,
+          }
+
+          res.cookie("token", null, cookieOption);
+          res.status(200).json({
+            success: true,
+            message: "Logout Out"
+          })
+       } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message,
+          })
+       }
+}
+
 module.exports = {
     signupHandler,
     signinHandler,
+    getUserHandler,
+    logoutHandler,
 }
 
